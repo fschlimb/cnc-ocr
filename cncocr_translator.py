@@ -92,6 +92,7 @@ def writeArchTemplate(path, **kwargs):
 
 # Generate graph scaffolding files
 prependedPattern = "{gname}{fname}"
+writeTemplate("icnc.h", namepattern="{gname}_icnc.h")
 writeTemplate("Graph.h", namepattern="{gname}.h")
 writeTemplate("_internal.h", namepattern=prependedPattern)
 writeTemplate("_step_ops.c", namepattern=prependedPattern)
