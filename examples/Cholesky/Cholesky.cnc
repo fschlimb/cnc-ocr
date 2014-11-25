@@ -59,6 +59,7 @@ $context {
 // Input from the caller: tile pointers, tile size and loop end value
 ( $init: () )
  -> [ startTime: () ],
+    [ Lkji: { 0 .. tileCount }, { 0 .. tileCount }, 0 ],
     ( kComputeStep: () );
  
 // Return to the caller
