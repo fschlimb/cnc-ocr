@@ -1,5 +1,6 @@
 {% import "common_macros.inc.c" as util with context -%}
 {{ util.auto_file_banner() }}
+{% import "icnc/macros_icnc.inc" as util -%}
 
 {% set defname = "_CNC_" ~ g.name.upper() ~ "_H_INCLUDED_" -%}
 #ifndef {{defname}}
@@ -59,7 +60,6 @@ template <> struct cnc_hash< {{name}}_key_t >
 CNC_BITWISE_SERIALIZABLE( {{name}}_key_t );
 #endif
 {% else -%}
-
 typedef cnc_tag_t {{name}}_key_t;
 {% endif %}
 {% endfor %}
@@ -117,12 +117,17 @@ struct {{g.name}}_context : public CnC::context< {{g.name}}_context >
     {%- endfor %}
 
     // item-collections
-    {%- for i in g.concreteItems %}
-    {{ ("CnC::item_collection< " ~ i.collName ~ "_key_t, " ~ i.type ~ " > " ~ i.collName ~ ";") if i.key}}
+    {%- for i in g.itemDeclarations %}
+    {{ ("CnC::item_collection< " ~ i ~ "_key_t, " ~ g.itemDeclarations[i].type ~ " > " ~ name ~ ";")}}
+    {%- endfor %}
+
+    // other parameters
+    {%- for line in g.ctxParams %}
+    {{ line }}
     {%- endfor %}
 
     // constructor
-    {{g.name}}_context() :
+    {{g.name}}_context( {{util.render_ctxtargs_param(g)}} ) :
         // initialize tag/step-collections
         {%- for stepfun in g.finalAndSteps -%}
         {%- set isFinalizer = loop.first -%}
@@ -131,11 +136,11 @@ struct {{g.name}}_context : public CnC::context< {{g.name}}_context >
         {%- endif -%}
         {%- endfor %}
         // initialize item-collections
-        {%- for i in g.concreteItems %}
-        {%- if i.key %}
-        {{"," if not loop.first}} {{i.collName}}( *this, "{{i.collName}}" )
-        {%- endif -%}
+        {%- for i in g.itemDeclarations %}
+        {{"," if not loop.first}} {{i}}( *this, "{{i}}" )
         {%- endfor %}
+        // initialize other parameters
+        {{util.render_ctxtargs_init(g)}}
     {
         // data and control relationships
         {%- for stepfun in g.finalAndSteps -%}
@@ -151,6 +156,13 @@ struct {{g.name}}_context : public CnC::context< {{g.name}}_context >
         {%- endif  -%}
         {%- endfor %}
     }
+
+#ifdef _DIST_
+    virtual void serialize( CnC::serializer & ser )
+    {
+        ser & {{util.render_ctxtargs_param(g, types=False, sfx='', sep=' & ')}};
+    }
+#endif
 }
 
 #endif // {{defname}}
