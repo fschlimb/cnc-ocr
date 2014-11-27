@@ -43,10 +43,15 @@ typedef cnc_tag_t {{name}}_{{fx}}_t;
     {%- set tagkey = ("key" if  datadep.kind == 'ITEM' else 'tag') -%}
     {%- set isarange = [] -%}
     {%- for k in (datadep.key if datadep.kind == 'ITEM' else datadep.tag) -%}
+    {% do isarange.append(1) if k.isRanged %}
+    {%- endfor -%}
+    {%- if datadep.kind == 'ITEM' and instantiate and isarange|count > 0 -%}
+    {{g.itemDeclarations[datadep.collName].type ~ " " ~ datadep.binding ~ "_handle" ~ (" /* = TODO: array handle? */" if todo) ~ ";"}}
+    {% endif -%}
+    {%- for k in (datadep.key if datadep.kind == 'ITEM' else datadep.tag) -%}
     {%- if k.isRanged -%}
-    {% do isarange.append(1) %}
     {%- set idx = "i" ~ loop.index0 -%}
-    {% call util.render_indented(loop.index0) %}
+    {%- call util.render_indented(loop.index0 - 1) %}
     for ( int {{idx}} = {{k.start}}; {{idx}} < {{k.end}}; ++{{idx}} )
     {%- endcall -%}
     {%- endif -%}
@@ -54,10 +59,9 @@ typedef cnc_tag_t {{name}}_{{fx}}_t;
     {{" {" if isarange|count > 0 and datadep.kind == 'ITEM'}}
     {%- call util.render_indented(isarange|count) -%}
     {%- if datadep.kind == 'ITEM' and instantiate %}
-    {{g.itemDeclarations[datadep.collName].type ~ datadep.binding ~ "_handle" ~ (" /* = TODO: computation/initialization */" if todo and getput != 'get') ~ ";"}}
-    {% else %}
+    {{(g.itemDeclarations[datadep.collName].type) ~ " " ~ datadep.binding ~ "_handle" ~ (" /* = TODO: computation/initialization */" if todo and getput != 'get') ~ ";"}}
     {% endif -%}
-    {% if getput -%}
+    {%- if getput %}
     {{ctxt ~ datadep.collName ~ "." ~ getput ~ "( " ~ datadep.collName}}_{{tagkey}}_t( 
     {%- for k in (datadep.key if datadep.kind == 'ITEM' else datadep.tag) -%}
     {%- if k.isRanged -%}
@@ -70,7 +74,10 @@ typedef cnc_tag_t {{name}}_{{fx}}_t;
     {%- if datadep.kind == 'ITEM' -%}
     , {{datadep.binding}}_handle
     {%- endif -%}
-    {{" );" ~ (" /* TODO: use it */" if todo and getput == 'get')}}
+    {{" );"}}
+    {%- if todo and datadep.kind == 'ITEM' -%}
+    {{" /* TODO: use it */" if getput == 'get' else (" /* TODO: array handle? */" if isarange|count > 0)}}
+    {%- endif -%}
     {%- endif -%}
     {%- endcall %}
     {%- call util.render_indented((isarange|count)-1) %}

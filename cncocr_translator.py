@@ -137,6 +137,7 @@ else: # intel CnC
     if args.intel == 'overwrite':
         ow = True
     writeTemplate("icnc/context.h", namepattern="{gname}_context.h", destdir=".", overwrite=ow)
+    writeArchTemplate("_defs.h", namepattern="{gname}_defs.h", destdir=".", overwrite=ow)
     writeTemplate("icnc/main.cpp", namepattern="{gname}_main.cpp", destdir=".", overwrite=ow)
     for stepName in graphData.stepFunctions.keys():
         writeTemplate("icnc/step.cpp", step=stepName, namepattern="{gname}_{sname}.cpp", destdir=".", overwrite=ow)

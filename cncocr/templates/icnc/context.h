@@ -114,7 +114,7 @@ struct {{g.name}}_context : public CnC::context< {{g.name}}_context >
 #ifdef _DIST_
     virtual void serialize( CnC::serializer & ser )
     {
-        ser & {{util.render_ctxtargs_param(g, types=False, pfx='', sep=' & ')}};
+        {{("ser & " ~ util.render_ctxtargs_param(g, types=False, pfx='', sep=' & ') ~ ";") if g.ctxParams|count}}
     }
 #endif
  };
