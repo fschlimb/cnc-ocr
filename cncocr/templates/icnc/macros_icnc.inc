@@ -1,4 +1,42 @@
 {% import "common_macros.inc.c" as util -%}
+
+{#/****** write structs and typedefs ******/#}
+{% macro render_tagdef(name, tag, fx) %}
+// *********************************************************
+// item-collection {{name}}
+{% if tag|count > 1 -%}
+typedef struct {{name}}_{{fx}} {
+    {{name}}_{{fx}}( const cnc_tag_t {{tag|join("_=-1, const cnc_tag_t ")}}_=-1 ) {{": "}}
+    {%- for arg in tag -%}
+    {{arg ~ "( " ~ arg ~ "_ )" ~ (", " if not loop.last)}}
+    {%- endfor -%}
+    {{" {}"}}
+    cnc_tag_t {{tag|join(", ")}};
+    bool operator==(const {{name}}_{{fx}} & o) const {
+        return {% for arg in tag -%}
+        {{arg}} == o.{{arg}}{{" && " if not loop.last}}
+        {%- endfor -%}
+        ;
+    }
+} {{name}}_{{fx}}_t;
+
+template <> struct cnc_hash< {{name}}_{{fx}}_t >
+{ size_t operator()(const {{name}}_{{fx}}_t& tt) const {
+    return (
+    {%- for arg in tag -%}
+        {{" (tt." ~ arg ~ (")" if loop.first else " << ((3*" ~ loop.index ~ ")-1))") ~ (" +" if not loop.last)}}
+    {%- endfor -%}
+    {{" );"}}
+} };
+
+#ifdef _DIST_
+CNC_BITWISE_SERIALIZABLE( {{name}}_{{fx}}_t );
+#endif
+{% else -%}
+typedef cnc_tag_t {{name}}_{{fx}}_t;
+{% endif -%}
+{% endmacro %}
+
 {#/****** write all puts for given step/env ******/#}
 {% macro render_dependence(g, ctxt, datadep, getput='put', instantiate=False, todo=True) %}
     {%- if instantiate == False or getput or datadep.kind == 'ITEM' -%}
@@ -41,6 +79,8 @@
     {%- endif -%}
 {%- endmacro %}
 
+
+{#/****** initialize/instantiate context members/vars ******/#}
 {% macro render_ctxtargs_init(g, pfx='_', types=False) %}
    {%- for line in g.ctxParams -%}
    {%- set l = line.translate(None,',;') -%}
@@ -52,6 +92,8 @@
    {% endfor %}
 {%- endmacro %}
 
+
+{#/****** write context arguments/parameters ******/#}
 {% macro render_ctxtargs_param(g, types=True, pfx='_', sep=', ', dflt='') %}
    {%- for line in g.ctxParams -%}
    {%- set l = line.translate(None,',;') -%}

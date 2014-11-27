@@ -40,37 +40,7 @@ typedef int cnc_tag_t;
 {% for name, i in g.itemDeclarations.items() -%}
 // *********************************************************
 // item-collection {{name}}
-{% if i.key|count > 1 -%}
-typedef struct {{name}}_key {
-    {{name}}_key( const cnc_tag_t {{i.key|join("_=-1, const cnc_tag_t ")}}_=-1 ) {{": "}}
-    {%- for arg in i.key -%}
-    {{arg ~ "( " ~ arg ~ "_ )" ~ (", " if not loop.last)}}
-    {%- endfor -%}
-    {{" {}"}}
-    cnc_tag_t {{i.key|join(", ")}};
-    bool operator==(const {{name}}_key & o) const {
-        return {% for arg in i.key -%}
-        {{arg}} == o.{{arg}}{{" && " if not loop.last}}
-        {%- endfor -%}
-        ;
-    }
-} {{name}}_key_t;
-
-template <> struct cnc_hash< {{name}}_key_t >
-{ size_t operator()(const {{name}}_key_t& tt) const {
-    return (
-    {%- for arg in i.key -%}
-        {{" (tt." ~ arg ~ (")" if loop.first else " << ((3*" ~ loop.index ~ ")-1))") ~ (" +" if not loop.last)}}
-    {%- endfor -%}
-    {{" );"}}
-} };
-
-#ifdef _DIST_
-CNC_BITWISE_SERIALIZABLE( {{name}}_key_t );
-#endif
-{% else -%}
-typedef cnc_tag_t {{name}}_key_t;
-{% endif %}
+{{util.render_tagdef(name, i.key, 'key')}}
 {% endfor %}
 
 /*********************************************************************************\
@@ -82,39 +52,8 @@ typedef cnc_tag_t {{name}}_key_t;
 {% if not isFinalizer -%}
 // *********************************************************
 // Step {{stepfun.collName}}
-{% if stepfun.tag|count > 1 -%}
-typedef struct {{stepfun.collName}}_tag {
-    {{stepfun.collName}}_tag( const cnc_tag_t {{stepfun.tag|join("_=-1, const cnc_tag_t ")}}_=-1 ) {{": "}} 
-    {%- for arg in stepfun.tag -%}
-    {{arg ~ "( " ~ arg ~ "_ )" ~ (", " if not loop.last)}}
-    {%- endfor -%}
-    {{" {}"}}
-    cnc_tag_t {{stepfun.tag|join(", ")}};
-    bool operator==(const {{stepfun.collName}}_tag & o) const {
-        return {% for arg in stepfun.tag -%}
-        {{arg}} == o.{{arg}}{{" && " if not loop.last}}
-        {%- endfor -%}
-        ;
-    }
-} {{stepfun.collName}}_tag_t;
-
-template <> struct cnc_hash< {{stepfun.collName}}_tag_t >
-{ size_t operator()(const {{stepfun.collName}}_tag_t& tt) const {
-    return (
-    {%- for arg in stepfun.tag -%}
-        {{" (tt." ~ arg ~ (")" if loop.first else " << ((3*" ~ loop.index ~ ")-1))") ~ (" +" if not loop.last)}}
-    {%- endfor -%}
-    {{" );"}}
-} };
-
-#ifdef _DIST_
-CNC_BITWISE_SERIALIZABLE( {{stepfun.collName}}_tag_t );
-#endif
-{%- else -%}
-typedef cnc_tag_t {{stepfun.collName}}_tag_t;
-{%- endif %}
-
- struct {{stepfun.collName}}_step { int execute( const {{stepfun.collName}}_tag_t &, {{g.name}}_context & ) const; };
+{{util.render_tagdef(stepfun.collName, stepfun.tag, 'tag')}}
+struct {{stepfun.collName}}_step { int execute( const {{stepfun.collName}}_tag_t &, {{g.name}}_context & ) const; };
 {% endif %}
 {% endfor %}
 
