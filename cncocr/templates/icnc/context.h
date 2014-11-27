@@ -7,22 +7,25 @@
 #define {{defname}}
 
 #ifdef _DIST_
-# include "dist_cnc.h"
+# include <cnc/dist_cnc.h>
 #else // _DIST_
-# include "cnc.h"
+# include <cnc/cnc.h>
 #endif // _DIST_
+
+struct {{g.name}}_context;
 
 /*********************************************************************************\
  * tag/step combo collection, needed as long cncocr doesn't support tag-collections
 \*********************************************************************************/
 template< typename Tag, typename Step >
-class tagged_step_collection : public CnC::tag_collection< Tag >, CnC::step_collection< Step >
+class tagged_step_collection : public CnC::tag_collection< Tag >, public CnC::step_collection< Step >
 {
+public:
     template< typename Derived >
     tagged_step_collection( CnC::context< Derived > & ctxt, const std::string & name )
       : CnC::tag_collection< Tag >( ctxt, name ), CnC::step_collection< Step >( ctxt, name )
     {}
-}
+};
 
 
 /*********************************************************************************\
@@ -45,13 +48,19 @@ typedef struct {{name}}_key {
     {%- endfor -%}
     {{" {}"}}
     cnc_tag_t {{i.key|join(", ")}};
+    bool operator==(const {{name}}_key & o) const {
+        return {% for arg in i.key -%}
+        {{arg}} == o.{{arg}}{{" && " if not loop.last}}
+        {%- endfor -%}
+        ;
+    }
 } {{name}}_key_t;
 
 template <> struct cnc_hash< {{name}}_key_t >
-{ size_t operator()(const {{name}}_tag_t& tt) const {
+{ size_t operator()(const {{name}}_key_t& tt) const {
     return (
     {%- for arg in i.key -%}
-        {{" (tt." ~ arg ~ (")" if loop.first else " << ~ ((3*" ~ loop.index ~ ")-1))") ~ (" +" if not loop.last)}}
+        {{" (tt." ~ arg ~ (")" if loop.first else " << ((3*" ~ loop.index ~ ")-1))") ~ (" +" if not loop.last)}}
     {%- endfor -%}
     {{" );"}}
 } };
@@ -81,13 +90,19 @@ typedef struct {{stepfun.collName}}_tag {
     {%- endfor -%}
     {{" {}"}}
     cnc_tag_t {{stepfun.tag|join(", ")}};
+    bool operator==(const {{stepfun.collName}}_tag & o) const {
+        return {% for arg in stepfun.tag -%}
+        {{arg}} == o.{{arg}}{{" && " if not loop.last}}
+        {%- endfor -%}
+        ;
+    }
 } {{stepfun.collName}}_tag_t;
 
 template <> struct cnc_hash< {{stepfun.collName}}_tag_t >
 { size_t operator()(const {{stepfun.collName}}_tag_t& tt) const {
     return (
     {%- for arg in stepfun.tag -%}
-        {{" (tt." ~ arg ~ (")" if loop.first else " << ~ ((3*" ~ loop.index ~ ")-1))") ~ (" +" if not loop.last)}}
+        {{" (tt." ~ arg ~ (")" if loop.first else " << ((3*" ~ loop.index ~ ")-1))") ~ (" +" if not loop.last)}}
     {%- endfor -%}
     {{" );"}}
 } };
@@ -99,7 +114,7 @@ CNC_BITWISE_SERIALIZABLE( {{stepfun.collName}}_tag_t );
 typedef cnc_tag_t {{stepfun.collName}}_tag_t;
 {%- endif %}
 
-struct {{stepfun.collName}}_step { int execute( const {{stepfun.collName}}_tag_t &, {{g.name}}_context & ) const; }
+ struct {{stepfun.collName}}_step { int execute( const {{stepfun.collName}}_tag_t &, {{g.name}}_context & ) const; };
 {% endif %}
 {% endfor %}
 
@@ -118,7 +133,7 @@ struct {{g.name}}_context : public CnC::context< {{g.name}}_context >
 
     // item-collections
     {%- for i in g.itemDeclarations %}
-    {{ ("CnC::item_collection< " ~ i ~ "_key_t, " ~ g.itemDeclarations[i].type ~ " > " ~ name ~ ";")}}
+    {{ ("CnC::item_collection< " ~ i ~ "_key_t, " ~ g.itemDeclarations[i].type ~ " > " ~ i ~ ";")}}
     {%- endfor %}
 
     // other parameters
@@ -127,7 +142,7 @@ struct {{g.name}}_context : public CnC::context< {{g.name}}_context >
     {%- endfor %}
 
     // constructor
-    {{g.name}}_context( {{util.render_ctxtargs_param(g)}} ) :
+    {{g.name}}_context( {{util.render_ctxtargs_param(g, dflt=' = -1')}} ) :
         // initialize tag/step-collections
         {%- for stepfun in g.finalAndSteps -%}
         {%- set isFinalizer = loop.first -%}
@@ -160,9 +175,9 @@ struct {{g.name}}_context : public CnC::context< {{g.name}}_context >
 #ifdef _DIST_
     virtual void serialize( CnC::serializer & ser )
     {
-        ser & {{util.render_ctxtargs_param(g, types=False, sfx='', sep=' & ')}};
+        ser & {{util.render_ctxtargs_param(g, types=False, pfx='', sep=' & ')}};
     }
 #endif
-}
+ };
 
 #endif // {{defname}}

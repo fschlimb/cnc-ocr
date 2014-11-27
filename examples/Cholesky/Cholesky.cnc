@@ -11,8 +11,7 @@
 // graph parameters
 
 $context {
-    int numTiles;
-    int tileSize;
+    int numTiles, tileSize, tileCount;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

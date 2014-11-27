@@ -1,27 +1,26 @@
 {% import "common_macros.inc.c" as util -%}
 {#/****** write all puts for given step/env ******/#}
-{% macro render_dependence(g, datadep, getput='put', instantiate=False, todo=True) %}
+{% macro render_dependence(g, ctxt, datadep, getput='put', instantiate=False, todo=True) %}
     {%- if instantiate == False or getput or datadep.kind == 'ITEM' -%}
+    {%- set tagkey = ("key" if  datadep.kind == 'ITEM' else 'tag') -%}
     {%- set isarange = [] -%}
     {%- for k in (datadep.key if datadep.kind == 'ITEM' else datadep.tag) -%}
     {%- if k.isRanged -%}
     {% do isarange.append(1) %}
-    {%- if datadep.kind == 'ITEM' -%}
     {%- set idx = "i" ~ loop.index0 -%}
     {% call util.render_indented(loop.index0) %}
     for ( int {{idx}} = {{k.start}}; {{idx}} < {{k.end}}; ++{{idx}} )
     {%- endcall -%}
     {%- endif -%}
-    {% endif -%}
     {%- endfor -%}
     {{" {" if isarange|count > 0 and datadep.kind == 'ITEM'}}
     {%- call util.render_indented(isarange|count) -%}
     {%- if datadep.kind == 'ITEM' and instantiate %}
-    {{(g.itemDeclarations[datadep.collName].type ~ datadep.binding ~ "_handle" ~ (" = /* TODO: computation/initialization */" if todo and getput != 'get') ~ ";")}}
+    {{g.itemDeclarations[datadep.collName].type ~ datadep.binding ~ "_handle" ~ (" /* = TODO: computation/initialization */" if todo and getput != 'get') ~ ";"}}
     {% else %}
     {% endif -%}
     {% if getput -%}
-    {{datadep.collName ~ "." ~ getput ~ "( " ~ datadep.collName ~ "_key_t( "}}
+    {{ctxt ~ datadep.collName ~ "." ~ getput ~ "( " ~ datadep.collName}}_{{tagkey}}_t( 
     {%- for k in (datadep.key if datadep.kind == 'ITEM' else datadep.tag) -%}
     {%- if k.isRanged -%}
     {{"i" ~ loop.index0 ~ (", " if not loop.last)}}
@@ -42,20 +41,22 @@
     {%- endif -%}
 {%- endmacro %}
 
-{% macro render_ctxtargs_init(g, sfx='_') %}
+{% macro render_ctxtargs_init(g, pfx='_', types=False) %}
    {%- for line in g.ctxParams -%}
    {%- set l = line.translate(None,',;') -%}
+   {{line.split()[0] ~ " " if types == True else ", "}}
    {%- for p in l.split()[1:] -%}
-   , {{p}}( {{p}}{{sfx}} )
+   {{", " if not loop.first}}{{p}}( {{pfx}}{{p}} )
+   {%- endfor -%}
+   {{";" if types == True}}
    {% endfor %}
-   {%- endfor %}
 {%- endmacro %}
 
-{% macro render_ctxtargs_param(g, types=True, sfx='_', sep=', ') %}
+{% macro render_ctxtargs_param(g, types=True, pfx='_', sep=', ', dflt='') %}
    {%- for line in g.ctxParams -%}
    {%- set l = line.translate(None,',;') -%}
    {%- for p in l.split()[1:] -%}
-   {{line.split()[0] ~ " " if types == True}}{{p}}{{sfx}}{{(", " if not loop.last)}}
+   {{line.split()[0] ~ " " if types == True}}{{pfx}}{{p}}{{dflt}}{{(", " if not loop.last)}}
    {%- endfor -%}
    {{sep if not loop.last}}
    {%- endfor -%}
